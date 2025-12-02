@@ -1,9 +1,9 @@
-# Use Node.js official image
 FROM node:22-bullseye-slim
 
-# Install dependencies for Chromium
+# Install dependencies required by Chrome
 RUN apt-get update && apt-get install -y \
     wget \
+    gnupg \
     ca-certificates \
     fonts-liberation \
     libappindicator3-1 \
@@ -21,12 +21,15 @@ RUN apt-get update && apt-get install -y \
     libxdamage1 \
     libxrandr2 \
     xdg-utils \
-    --no-install-recommends && rm -rf /var/lib/apt/lists/*
+    curl \
+    unzip \
+    --no-install-recommends
 
-# Install Chrome
-RUN wget -q -O google-chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb \
-    && apt-get install -y ./google-chrome.deb \
-    && rm google-chrome.deb
+# Download and install Chrome
+RUN wget -q -O /tmp/google-chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb \
+    && apt-get install -y /tmp/google-chrome.deb || apt-get install -f -y \
+    && rm /tmp/google-chrome.deb \
+    && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
 WORKDIR /usr/src/app
@@ -38,7 +41,7 @@ RUN npm install
 # Copy application code
 COPY . .
 
-# Expose port (adjust if your app uses a different port)
+# Expose port
 EXPOSE 3000
 
 # Start the app
