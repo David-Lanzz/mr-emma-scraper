@@ -1,33 +1,24 @@
 const puppeteer = require("puppeteer-core");
+const path = require("path");
 const fs = require("fs");
 
 async function getBrowser() {
     // LOCAL WINDOWS DEVELOPMENT
     if (process.platform === "win32") {
-        const puppeteerFull = require("puppeteer");
-        return puppeteerFull.launch({ headless: true });
+        const p = require("puppeteer");
+        return p.launch({ headless: true });
     }
 
-    // PATHS TO CHECK ON RENDER
-    const candidates = [
-        "/usr/bin/google-chrome",
-        "/usr/bin/google-chrome-stable",
-        "/usr/bin/chromium",
-        "/usr/bin/chromium-browser",
-        "/usr/bin/chromium-browser-stable"
+    // Path where Chrome is stored after render-build.sh runs
+    const chromePaths = [
+        "/opt/render/project/.cache/puppeteer/chrome/linux-1095492/chrome",
+        "/opt/render/project/.cache/puppeteer/chrome/linux-1095492/chrome-linux64/chrome"
     ];
 
-    let executablePath = null;
-
-    for (const p of candidates) {
-        if (fs.existsSync(p)) {
-            executablePath = p;
-            break;
-        }
-    }
+    let executablePath = chromePaths.find(p => fs.existsSync(p));
 
     if (!executablePath) {
-        throw new Error("No Chromium executable found on Render.");
+        throw new Error("Chromium not found in Render build cache.");
     }
 
     return puppeteer.launch({
@@ -38,8 +29,7 @@ async function getBrowser() {
             "--disable-setuid-sandbox",
             "--disable-gpu",
             "--disable-dev-shm-usage",
-            "--no-zygote",
-            "--disable-software-rasterizer"
+            "--no-zygote"
         ]
     });
 }
