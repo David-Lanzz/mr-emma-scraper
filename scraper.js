@@ -3,18 +3,16 @@ const puppeteer = require("puppeteer-core");
 async function getBrowser() {
     return puppeteer.launch({
         headless: true,
-        executablePath: "/usr/bin/google-chrome", // matches Docker-installed Chrome
+        executablePath: "/usr/bin/google-chrome",
         args: [
             "--no-sandbox",
             "--disable-setuid-sandbox",
-            "--disable-gpu",
             "--disable-dev-shm-usage",
+            "--disable-gpu",
             "--no-zygote"
         ]
     });
 }
-
-
 
 async function scrape(name, state) {
     const browser = await getBrowser();

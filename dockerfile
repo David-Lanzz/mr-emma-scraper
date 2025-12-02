@@ -1,3 +1,4 @@
+# Use Node.js official image
 FROM node:22-bullseye-slim
 
 # Install dependencies for Chromium
@@ -34,10 +35,10 @@ WORKDIR /usr/src/app
 COPY package*.json ./
 RUN npm install
 
-# Copy app code
+# Copy application code
 COPY . .
 
-# Expose port
+# Expose port (adjust if your app uses a different port)
 EXPOSE 3000
 
 # Start the app
