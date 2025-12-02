@@ -25,10 +25,10 @@ async function getBrowser() {
             "--disable-renderer-backgrounding",
             "--disable-sync",
             "--mute-audio",
+            "--single-process" // reduces memory footprint
         ]
     });
 }
-
 
 async function scrape(name, state) {
     const browser = await getBrowser();
@@ -55,55 +55,39 @@ async function scrape(name, state) {
 
         await page.goto(url, { waitUntil: "networkidle2", timeout: 0 });
 
-        const listingsExist = await page.$(".search-itm.js-shiny-data-user");
-        if (!listingsExist) {
+        const listings = await page.$$(".search-itm.js-shiny-data-user");
+        if (!listings.length) {
             console.log("No more pages left. Scraping complete.");
             break;
         }
 
-        const pageResults = await page.evaluate(async () => {
-            const data = [];
-            const profiles = document.querySelectorAll(".search-itm.js-shiny-data-user");
+        for (const profile of listings) {
+            // Extract text safely
+            const businessName = await profile.$eval(".search-itm__rag.google_analytics_tracked", el => el.innerText.trim()).catch(() => null);
+            const category = await profile.$eval(".search-itm__category", el => el.innerText.trim()).catch(() => null);
+            const address = await profile.$eval(".search-itm__adr", el => el.innerText.trim()).catch(() => null);
 
-            for (let profile of profiles) {
-                const nameEl = profile.querySelector(".search-itm__rag.google_analytics_tracked");
-                const categoryEl = profile.querySelector(".search-itm__category");
-                const addressEl = profile.querySelector(".search-itm__adr");
-                const phoneBtn = profile.querySelector(".bttn--yellow.bttn--lg-list");
-
-                let phoneNumber = null;
-
-                if (phoneBtn) phoneBtn.click();
-                await new Promise(res => setTimeout(res, 1000));
-
-                const revealedPhone = profile.querySelector(".search-itm__ballonIcons");
-                if (revealedPhone) phoneNumber = revealedPhone.innerText.trim();
-
-                data.push({
-                    businessName: nameEl?.innerText.trim() || null,
-                    category: categoryEl?.innerText.trim() || null,
-                    address: addressEl?.innerText.trim() || null,
-                    phone: phoneNumber
-                });
+            let phone = null;
+            const phoneBtn = await profile.$(".bttn--yellow.bttn--lg-list");
+            if (phoneBtn) {
+                await phoneBtn.click();
+                await page.waitForTimeout(800); // wait for phone to reveal
+                phone = await profile.$eval(".search-itm__ballonIcons", el => el.innerText.trim()).catch(() => null);
             }
-            return data;
-        });
 
-        results = results.concat(pageResults);
+            results.push({ businessName, category, address, phone });
+        }
 
-        // 💡 free memory
+        // Free memory between pages
         await page.evaluate(() => { document.body.innerHTML = ""; });
 
-        await new Promise(res => setTimeout(res, 300));
-
+        await page.waitForTimeout(300); // slight delay
         pageNumber++;
     }
 
     await browser.close();
-
     return results;
 }
-
 
 exports.scrape = (req, res) => {
     try {
@@ -112,7 +96,8 @@ exports.scrape = (req, res) => {
             return res.status(400).send({ error: "Missing 'name' or 'state' parameter." });
         }
 
-        scrape(name, state).then(data => res.status(200).send({ data }))
+        scrape(name, state)
+            .then(data => res.status(200).send({ data }))
             .catch(err => res.status(500).send({ error: err.message }));
     } catch (error) {
         return res.status(500).send({ error: error.message });
