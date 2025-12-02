@@ -2,13 +2,15 @@ const puppeteer = require("puppeteer-core");
 
 
 async function getBrowser() {
-    // RUNNING LOCALLY ON WINDOWS
+
+    // Local Windows — use full Puppeteer
     if (process.platform === "win32") {
         const puppeteer = require("puppeteer");
         return puppeteer.launch({ headless: true });
     }
 
-    // RUNNING ON RENDER (LINUX)
+    // Render Linux — use system-installed Chromium
+    const puppeteer = require("puppeteer-core");
     return puppeteer.launch({
         headless: true,
         executablePath: "/usr/bin/chromium-browser",
@@ -22,6 +24,7 @@ async function getBrowser() {
         ]
     });
 }
+
 
 
 async function scrape(name, state) {
