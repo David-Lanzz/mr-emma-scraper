@@ -1,30 +1,48 @@
 const puppeteer = require("puppeteer-core");
-
+const fs = require("fs");
 
 async function getBrowser() {
-
-    // Local Windows — use full Puppeteer
+    // LOCAL WINDOWS DEVELOPMENT
     if (process.platform === "win32") {
-        const puppeteer = require("puppeteer");
-        return puppeteer.launch({ headless: true });
+        const puppeteerFull = require("puppeteer");
+        return puppeteerFull.launch({ headless: true });
     }
 
-    // Render Linux — use system-installed Chromium
-    const puppeteer = require("puppeteer-core");
+    // PATHS TO CHECK ON RENDER
+    const candidates = [
+        "/usr/bin/google-chrome",
+        "/usr/bin/google-chrome-stable",
+        "/usr/bin/chromium",
+        "/usr/bin/chromium-browser",
+        "/usr/bin/chromium-browser-stable"
+    ];
+
+    let executablePath = null;
+
+    for (const p of candidates) {
+        if (fs.existsSync(p)) {
+            executablePath = p;
+            break;
+        }
+    }
+
+    if (!executablePath) {
+        throw new Error("No Chromium executable found on Render.");
+    }
+
     return puppeteer.launch({
         headless: true,
-        executablePath: "/usr/bin/chromium-browser",
+        executablePath,
         args: [
             "--no-sandbox",
             "--disable-setuid-sandbox",
             "--disable-gpu",
             "--disable-dev-shm-usage",
             "--no-zygote",
-            "--single-process"
+            "--disable-software-rasterizer"
         ]
     });
 }
-
 
 
 async function scrape(name, state) {
