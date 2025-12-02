@@ -1,16 +1,20 @@
-# Use Puppeteer’s official image with Chromium preinstalled
 FROM ghcr.io/puppeteer/puppeteer:latest
 
 WORKDIR /app
 
-# Copy app code
-COPY . .
+# Copy package.json first (for caching)
+COPY package*.json ./
 
-# Install Node dependencies
+# Make /app writable and switch user
+RUN chown -R pptruser:pptruser /app
+USER pptruser
+
+# Install dependencies
 RUN npm install
 
-# Expose port
+# Copy the rest of your app
+COPY . .
+
 EXPOSE 3000
 
-# Start your app
 CMD ["node", "index.js"]
