@@ -1,29 +1,8 @@
-const puppeteer = require("puppeteer-core");
-const path = require("path");
-const fs = require("fs");
+const puppeteer = require("puppeteer");
 
 async function getBrowser() {
-    // LOCAL WINDOWS DEVELOPMENT
-    if (process.platform === "win32") {
-        const p = require("puppeteer");
-        return p.launch({ headless: true });
-    }
-
-    // Path where Chrome is stored after render-build.sh runs
-    const chromePaths = [
-        "/opt/render/project/.cache/puppeteer/chrome/linux-1095492/chrome",
-        "/opt/render/project/.cache/puppeteer/chrome/linux-1095492/chrome-linux64/chrome"
-    ];
-
-    let executablePath = chromePaths.find(p => fs.existsSync(p));
-
-    if (!executablePath) {
-        throw new Error("Chromium not found in Render build cache.");
-    }
-
     return puppeteer.launch({
         headless: true,
-        executablePath,
         args: [
             "--no-sandbox",
             "--disable-setuid-sandbox",
@@ -33,7 +12,6 @@ async function getBrowser() {
         ]
     });
 }
-
 
 async function scrape(name, state) {
     const browser = await getBrowser();
@@ -47,7 +25,6 @@ async function scrape(name, state) {
 
         await page.goto(url, { waitUntil: "networkidle2", timeout: 0 });
 
-        // Wait for listings or break if none exist
         const listingsExist = await page.$(".search-itm.js-shiny-data-user");
         if (!listingsExist) {
             console.log("No more pages left. Scraping complete.");
@@ -62,16 +39,14 @@ async function scrape(name, state) {
                 const nameEl = profile.querySelector(".search-itm__rag.google_analytics_tracked");
                 const categoryEl = profile.querySelector(".search-itm__category");
                 const addressEl = profile.querySelector(".search-itm__adr");
-                const phoneBtn = profile.querySelector(".bttn--yellow bttn--lg-list");
+                const phoneBtn = profile.querySelector(".bttn--yellow.bttn--lg-list");
 
                 let phoneNumber = null;
 
-                // The phone number is hidden behind the button → simulate click retrieval
                 if (phoneBtn) {
                     phoneBtn.click();
                 }
 
-                // We wait a bit to allow phone to reveal
                 await new Promise(res => setTimeout(res, 1000));
 
                 const revealedPhone = profile.querySelector(".search-itm__ballonIcons");
@@ -83,7 +58,7 @@ async function scrape(name, state) {
                     businessName: nameEl?.innerText.trim() || null,
                     category: categoryEl?.innerText.trim() || null,
                     address: addressEl?.innerText.trim() || null,
-                    phone: phoneNumber,
+                    phone: phoneNumber
                 });
             }
 
@@ -110,10 +85,9 @@ exports.scrape = (req, res) => {
             return res.status(400).send({ error: "Missing 'name' or 'state' parameter." });
         }
 
-        scrape(name, state).then(data => {
-            return res.status(200).send({ data });
-        });
+        scrape(name, state).then(data => res.status(200).send({ data }))
+                           .catch(err => res.status(500).send({ error: err.message }));
     } catch (error) {
         return res.status(500).send({ error: error.message });
     }
-}
+};

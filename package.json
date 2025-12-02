@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "express": "^5.2.1",
+    "puppeteer": "^24.31.0",
     "puppeteer-core": "^19.11.1"
   },
   "devDependencies": {
