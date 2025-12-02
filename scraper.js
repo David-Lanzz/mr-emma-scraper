@@ -2,7 +2,7 @@ const puppeteer = require("puppeteer-core");
 
 async function getBrowser() {
     return puppeteer.launch({
-        headless: true,
+        headless: "new",   // <-- FIXED HERE
         executablePath: "/usr/bin/google-chrome",
         args: [
             "--no-sandbox",
@@ -13,6 +13,7 @@ async function getBrowser() {
         ]
     });
 }
+
 
 async function scrape(name, state) {
     const browser = await getBrowser();
