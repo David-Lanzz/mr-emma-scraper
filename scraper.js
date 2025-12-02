@@ -25,34 +25,41 @@ async function getBrowser() {
             "--disable-renderer-backgrounding",
             "--disable-sync",
             "--mute-audio",
+            "--single-process" // further reduces memory usage
         ]
     });
 }
 
 async function scrape(name, state) {
     const browser = await getBrowser();
-    let pageNumber = 1;
     const results = [];
+    let pageNumber = 1;
 
     while (true) {
         const page = await browser.newPage();
 
-        // Disable images/fonts to reduce memory
+        // Block unnecessary requests to save memory
         await page.setRequestInterception(true);
         page.on("request", req => {
-            const type = req.resourceType();
-            if (["image", "stylesheet", "font"].includes(type)) req.abort();
+            if (["image", "stylesheet", "font"].includes(req.resourceType())) req.abort();
             else req.continue();
         });
 
         const url = `https://www.paginegialle.it/ricerca/${name}/${state}%20(RM)/p-${pageNumber}`;
         console.log(`Visiting: ${url}`);
-        await page.goto(url, { waitUntil: "networkidle2", timeout: 0 });
+
+        try {
+            await page.goto(url, { waitUntil: "networkidle2", timeout: 0 });
+        } catch (err) {
+            console.error(`Failed to load page ${pageNumber}:`, err.message);
+            await page.close();
+            break;
+        }
 
         const listings = await page.$$(".search-itm.js-shiny-data-user");
         if (!listings.length) {
             await page.close();
-            console.log("No more pages left. Scraping complete.");
+            console.log("No more pages. Scraping complete.");
             break;
         }
 
@@ -64,7 +71,7 @@ async function scrape(name, state) {
             let phone = null;
             const phoneBtn = await profile.$(".bttn--yellow.bttn--lg-list");
             if (phoneBtn) {
-                await phoneBtn.click();
+                await phoneBtn.click().catch(() => null);
                 await page.waitForTimeout(800);
                 phone = await profile.$eval(".search-itm__ballonIcons", el => el.innerText.trim()).catch(() => null);
             }
@@ -72,7 +79,7 @@ async function scrape(name, state) {
             results.push({ businessName, category, address, phone });
         }
 
-        await page.close(); // free memory immediately
+        await page.close(); // immediately free memory
         pageNumber++;
     }
 
@@ -88,6 +95,7 @@ exports.scrape = async (req, res) => {
         const data = await scrape(name, state);
         res.status(200).send({ data });
     } catch (error) {
+        console.error("Scrape failed:", error);
         res.status(500).send({ error: error.message });
     }
 };
