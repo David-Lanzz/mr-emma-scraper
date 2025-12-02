@@ -1,5 +1,10 @@
 const puppeteer = require("puppeteer");
 
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 async function scrape(name, state) {
     // Launch Puppeteer with the new headless mode
     const browser = await puppeteer.launch({
@@ -46,7 +51,8 @@ async function scrape(name, state) {
             const phoneBtn = await profile.$(".bttn--yellow.bttn--lg-list");
             if (phoneBtn) {
                 await phoneBtn.click();
-                await page.waitForTimeout(800);
+                // usage:
+                await sleep(800);
                 phone = await profile.$eval(".search-itm__ballonIcons", el => el.innerText).catch(() => null);
             }
 
