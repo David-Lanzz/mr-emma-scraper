@@ -1,28 +1,23 @@
 const puppeteer = require("puppeteer-core");
 
-let browserPromise;
-
 async function getBrowser() {
-    if (!browserPromise) {
-        browserPromise = puppeteer.launch({
-            headless: "new",
-            executablePath: "/usr/bin/google-chrome",
-            args: [
-                "--no-sandbox",
-                "--disable-setuid-sandbox",
-                "--disable-dev-shm-usage",
-                "--disable-gpu",
-                "--no-zygote"
-            ]
-        });
-    }
-    return browserPromise;
+    return puppeteer.launch({
+        headless: "new",   // <-- FIXED HERE
+        executablePath: "/usr/bin/google-chrome",
+        args: [
+            "--no-sandbox",
+            "--disable-setuid-sandbox",
+            "--disable-dev-shm-usage",
+            "--disable-gpu",
+            "--no-zygote"
+        ]
+    });
 }
+
 
 async function scrape(name, state) {
     const browser = await getBrowser();
     const page = await browser.newPage();
-
     let pageNumber = 1;
     let results = [];
 
@@ -50,12 +45,16 @@ async function scrape(name, state) {
 
                 let phoneNumber = null;
 
-                if (phoneBtn) phoneBtn.click();
+                if (phoneBtn) {
+                    phoneBtn.click();
+                }
 
                 await new Promise(res => setTimeout(res, 1000));
 
                 const revealedPhone = profile.querySelector(".search-itm__ballonIcons");
-                if (revealedPhone) phoneNumber = revealedPhone.innerText.trim();
+                if (revealedPhone) {
+                    phoneNumber = revealedPhone.innerText.trim();
+                }
 
                 data.push({
                     businessName: nameEl?.innerText.trim() || null,
@@ -74,22 +73,23 @@ async function scrape(name, state) {
         pageNumber++;
     }
 
-    await page.close(); // Only close the page, not the browser
+    await browser.close();
 
+    console.log("\nFINAL SCRAPED RESULTS:");
+    console.log(results);
     return results;
 }
 
-exports.scrape = async (req, res) => {
+exports.scrape = (req, res) => {
     try {
         const { name, state } = req.body;
         if (!name || !state) {
             return res.status(400).send({ error: "Missing 'name' or 'state' parameter." });
         }
 
-        const data = await scrape(name, state);
-        res.status(200).send({ data });
-
+        scrape(name, state).then(data => res.status(200).send({ data }))
+                           .catch(err => res.status(500).send({ error: err.message }));
     } catch (error) {
-        res.status(500).send({ error: error.message });
+        return res.status(500).send({ error: error.message });
     }
 };
