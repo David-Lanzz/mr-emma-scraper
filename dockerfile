@@ -1,15 +1,15 @@
-# Use Node slim image
 FROM node:22-bullseye-slim
 
-# Install dependencies required by Puppeteer/Chrome
+# Install all Chromium dependencies
 RUN apt-get update && apt-get install -y \
-    wget gnupg libnss3 libatk1.0-0 libx11-xcb1 libcups2 libxcomposite1 \
-    libxdamage1 libxrandr2 libgbm1 libasound2 libpangocairo-1.0-0 \
-    libpangoft2-1.0-0 libfontconfig1 libxss1 libxtst6 xdg-utils \
-    --no-install-recommends \
+    wget gnupg ca-certificates fonts-liberation libappindicator3-1 \
+    libasound2 libatk-bridge2.0-0 libatk1.0-0 libcups2 libdbus-1-3 \
+    libdrm2 libgbm1 libnspr4 libnss3 libx11-xcb1 libxcomposite1 \
+    libxdamage1 libxrandr2 xdg-utils libpangocairo-1.0-0 libpangoft2-1.0-0 \
+    libfontconfig1 libxss1 libxtst6 --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
-# Set working directory to root (repo root)
+# Set working directory
 WORKDIR /
 
 # Copy package files first (for caching)
