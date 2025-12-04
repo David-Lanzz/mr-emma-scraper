@@ -80,4 +80,4 @@ exports.scrape = async (req, res) => {
     }
 };
 
-scrape("idraulico", "roma").then(data => console.log(data)).catch(err => console.error(err));
+
