@@ -31,7 +31,7 @@ async function scrape(name, state) {
             else req.continue();
         });
 
-        const url = `https://www.paginegialle.it/persone/${name}/${state}%20(RM)/p-${pageNumber}`;
+        const url = `https://www.paginegialle.it/${type === 'private' ? 'persone' : 'ricerca'}/${name}/${state}%20(RM)/p-${pageNumber}`;
         console.log(`Visiting: ${url}`);
 
         await page.goto(url, { waitUntil: "networkidle2", timeout: 0 });
