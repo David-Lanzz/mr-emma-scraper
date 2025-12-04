@@ -30,7 +30,7 @@ async function scrape(name, state, type = 'business') {
             if (["image", "stylesheet", "font"].includes(req.resourceType())) req.abort();
             else req.continue();
         });
-        const url = `https://www.paginebianche.it/${type.toLowerCase() === 'private' ? 'persone' : 'ricerca'}?qs=${name}&dv=${state}%20(RM)&p=${pageNumber}`;
+        const url = `https://www.paginebianche.it/${type.toLowerCase() === 'private' ? 'persone' : 'aziende'}?qs=${name}&dv=${state}%20(RM)&p=${pageNumber}`;
 
         console.log(`Visiting: ${url}`);
 
