@@ -1,20 +1,18 @@
 const puppeteer = require("puppeteer");
 
-
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function scrape(name, state, type = 'business') {
-    // Launch Puppeteer with the new headless mode
+async function scrape(name, state, type = "business") {
     const browser = await puppeteer.launch({
-        headless: "new",
+        headless: true,
         args: [
             "--no-sandbox",
             "--disable-setuid-sandbox",
             "--disable-dev-shm-usage",
-            "--disable-gpu",
-            "--single-process"
+            "--disable-gpu"
+            // ❌ removed "--single-process" (it crashes Chromium)
         ]
     });
 
@@ -24,42 +22,59 @@ async function scrape(name, state, type = 'business') {
     while (true) {
         const page = await browser.newPage();
 
-        // Disable images/fonts to reduce memory
+        // Block heavy resources
         await page.setRequestInterception(true);
         page.on("request", req => {
-            if (["image", "stylesheet", "font"].includes(req.resourceType())) req.abort();
-            else req.continue();
+            if (["image", "stylesheet", "font"].includes(req.resourceType()))
+                req.abort();
+            else
+                req.continue();
         });
-        const url = `https://www.paginebianche.it/${type.toLowerCase() === 'private' ? 'persone' : 'aziende'}?qs=${name}&dv=${state}%20(RM)&p=${pageNumber}`;
 
-        console.log(`Visiting: ${url}`);
+        const url = `https://www.paginebianche.it/${
+            type.toLowerCase() === "private" ? "persone" : "aziende"
+        }?qs=${name}&dv=${state}%20(RM)&p=${pageNumber}`;
+
+        console.log("Visiting:", url);
 
         await page.goto(url, { waitUntil: "networkidle2", timeout: 0 });
 
-        const listings = await page.$$(".search-itm.js-shiny-data-user");
+        // Correct selector for each listing
+        const listings = await page.$$(".list-element.list-element--free");
+
         if (!listings.length) {
             await page.close();
             break;
         }
 
         for (const profile of listings) {
-            const businessName = await profile.$eval(".search-itm__rag.google_analytics_tracked", el => el.innerText).catch(() => null);
-            const category = await profile.$eval(".search-itm__category", el => el.innerText).catch(() => null);
-            const address = await profile.$eval(".search-itm__adr", el => el.innerText).catch(() => null);
 
-            let phone = null;
-            const phoneBtn = await profile.$(".bttn--yellow.bttn--lg-list");
-            if (phoneBtn) {
-                await phoneBtn.click();
-                // usage:
-                await sleep(800);
-                phone = await profile.$eval(".search-itm__ballonIcons", el => el.innerText).catch(() => null);
-            }
+            // Business Name
+            const businessNameEl = await profile.$(".list-element__title.ln-3.org.fn");
+            const businessName = businessNameEl
+                ? await businessNameEl.evaluate(el => el.innerText.trim())
+                : null;
 
-            results.push({ businessName, category, address, phone });
+            // Address
+            const addressEl = await profile.$(".list-element__address.adr");
+            const address = addressEl
+                ? await addressEl.evaluate(el => el.innerText.trim())
+                : null;
+
+            // Phone (usually inside a button label)
+            const phoneEl = await profile.$(".btn__label.tel");
+            const phone = phoneEl
+                ? await phoneEl.evaluate(el => el.innerText.trim())
+                : null;
+
+            results.push({
+                businessName,
+                address,
+                phone
+            });
         }
 
-        await page.close(); // free memory immediately
+        await page.close();
         pageNumber++;
     }
 
@@ -70,7 +85,8 @@ async function scrape(name, state, type = 'business') {
 exports.scrape = async (req, res) => {
     try {
         const { name, state, type } = req.body;
-        if (!name || !state) return res.status(400).send({ error: "Missing 'name' or 'state' parameter." });
+        if (!name || !state)
+            return res.status(400).send({ error: "Missing 'name' or 'state' parameter." });
 
         const data = await scrape(name, state, type);
         res.status(200).send({ data });
@@ -79,5 +95,3 @@ exports.scrape = async (req, res) => {
         res.status(500).send({ error: error.message });
     }
 };
-
-
