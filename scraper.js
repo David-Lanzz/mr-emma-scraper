@@ -45,7 +45,7 @@ async function scrape(name, state, type = 'business') {
         for (const profile of listings) {
             const businessName = await profile.$eval(".search-itm__rag.google_analytics_tracked", el => el.innerText).catch(() => null);
             const category = await profile.$eval(".search-itm__category", el => el.innerText).catch(() => null);
-            const address = await profile.$eval(".listing-search-itm-adr", el => el.innerText).catch(() => null);
+            const address = await profile.$eval(".search-itm__adr", el => el.innerText).catch(() => null);
 
             let phone = null;
             const phoneBtn = await profile.$(".bttn--yellow.bttn--lg-list");
@@ -53,7 +53,7 @@ async function scrape(name, state, type = 'business') {
                 await phoneBtn.click();
                 // usage:
                 await sleep(800);
-                phone = await profile.$eval(".btn__label.tel", el => el.innerText).catch(() => null);
+                phone = await profile.$eval(".search-itm__ballonIcons", el => el.innerText).catch(() => null);
             }
 
             results.push({ businessName, category, address, phone });
