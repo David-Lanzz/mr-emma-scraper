@@ -10,13 +10,16 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
-WORKDIR /
+WORKDIR /usr/src/app
 
 # Copy package files first (for caching)
 COPY package*.json ./
 
-# Install dependencies including Puppeteer
-RUN npm install puppeteer --unsafe-perm
+# Install Node dependencies (Express, Puppeteer, etc.)
+RUN npm install --omit=dev
+
+# Install Chrome for Puppeteer into the cache (/root/.cache/puppeteer)
+RUN npx puppeteer browsers install chrome
 
 # Copy all code
 COPY . .
